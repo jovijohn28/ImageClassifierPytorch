@@ -2,19 +2,16 @@ import torch
 
 import argparse
 
+import matplotlib.pyplot as plt
+
+import torch.nn.functional as F
+
 from torch import nn, optim
 
 from torchvision import datasets, models, transforms
 
 from collections import OrderedDict
-import matplotlib.pyplot as plt
 
-import torch.nn.functional as F
-
-
-
-
-# %matplotlib inline
 
 
 
@@ -26,7 +23,7 @@ parser = argparse.ArgumentParser()
 
 
 
-parser.add_argument('data_directory', action='store',default='flowers',
+parser.add_argument('data_directory', action='store',
 
                     help='Store a Data Directory location')
 
@@ -126,48 +123,33 @@ test_dir = data_dir + '/test'
 
 # Define your transforms for the training, validation, and testing sets
 data_transforms = {'testing': transforms.Compose([transforms.Resize(255),
-                              transforms.CenterCrop(224),
-                              transforms.ToTensor(),
-                              transforms.Normalize([0.485, 0.456, 0.406],
-                                                   [0.229, 0.224, 0.225])]),
-                   'validation': transforms.Compose([transforms.Resize(255),
-                                 transforms.CenterCrop(224),
-                                 transforms.ToTensor(),
-                                 transforms.Normalize([0.485, 0.456, 0.406],
-                                                   [0.229, 0.224, 0.225])]),
-                   'training': transforms.Compose([transforms.RandomRotation(30),
-                               transforms.RandomResizedCrop(224),
-                               transforms.RandomHorizontalFlip(),
-                               transforms.ToTensor(),
-                               transforms.Normalize([0.485, 0.456, 0.406],
-                                                    [0.229, 0.224, 0.225])])
-                  }
+                                              transforms.CenterCrop(224),
+                                              transforms.ToTensor(),
+                                              transforms.Normalize([0.485, 0.456, 0.406],
+                                                                                  [0.229, 0.224, 0.225])]),
+                             'validation': transforms.Compose([transforms.Resize(255),
+                                                 transforms.CenterCrop(224),
+                                                 transforms.ToTensor(),
+                                                 transforms.Normalize([0.485, 0.456, 0.406],
+                                                                                     [0.229, 0.224, 0.225])]),
+                              'training': transforms.Compose([transforms.RandomRotation(30),
+                                              transforms.RandomResizedCrop(224),
+                                              transforms.RandomHorizontalFlip(),
+                                              transforms.ToTensor(),
+                                              transforms.Normalize([0.485, 0.456, 0.406],
+                                                                                  [0.229, 0.224, 0.225])])}
 
 image_datasets = {'training' : datasets.ImageFolder(train_dir, transform=data_transforms['training']),
-                  'testing' : datasets.ImageFolder(test_dir, transform=data_transforms['testing']),
-                  'validation' : datasets.ImageFolder(valid_dir, transform=data_transforms['validation'])
-                 }
+                               'testing' : datasets.ImageFolder(test_dir, transform=data_transforms['testing']),
+                               'validation' : datasets.ImageFolder(valid_dir, transform=data_transforms['validation'])}
 
 # TODO: Using the image datasets and the trainforms, define the dataloaders
 dataloaders = {'training' : torch.utils.data.DataLoader(image_datasets['training'], batch_size=64, shuffle=True),
-               'testing' : torch.utils.data.DataLoader(image_datasets['testing'], batch_size=64),
-               'validation' : torch.utils.data.DataLoader(image_datasets['validation'], batch_size=64)
-              }
+                         'testing' : torch.utils.data.DataLoader(image_datasets['testing'], batch_size=64),
+                         'validation' : torch.utils.data.DataLoader(image_datasets['validation'], batch_size=64)}
 
 class_to_idx = image_datasets['training'].class_to_idx
-
-
-
-
-
-
-
-
-
 # # Building and training the classifier
-
-
-
 # Build and train your network. Consider adding options to select an algorithm
 
 def build_model(modelName, hidden_units):
@@ -175,8 +157,6 @@ def build_model(modelName, hidden_units):
     if modelName == 'vgg':
 
         model = models.vgg11(pretrained=True) #instantiate the model
-
-
 
         for param in model.parameters():
 
@@ -325,25 +305,10 @@ def validate(model, valloader, criterion):
 
 
 
-# Training the network. Convert this to a function
-
-epochs = arguments.epochs
-
-print_every = 40
-
-steps = 0
-
-
-
-#model to cuda
-
+# Training the network
 model.to(device)
-
-
-
 #iterating for given number of epochs
-
-epochs = 3
+epochs = arguments.epochs
 steps = 0
 running_loss = 0
 print_every = 5
@@ -398,31 +363,30 @@ print('End of training')
 
 
 # Validation on the test set
-
 def chk_test_accuracy(testloader):
 
     optimizer.zero_grad()
-test_loss1=0
-accuracy1=0
-model.eval()
-with torch.no_grad():
-    for inputs, labels in dataloaders['testing']:
-        inputs, labels = inputs.to(device), labels.to(device)
-        logps = model.forward(inputs)
-        batch_loss = criterion(logps, labels)
+    test_loss1=0
+    accuracy1=0
+    model.eval()
+    with torch.no_grad():
+        for inputs, labels in dataloaders['testing']:
+            inputs, labels = inputs.to(device), labels.to(device)
+            logps = model.forward(inputs)
+            batch_loss = criterion(logps, labels)
 
-        test_loss1 += batch_loss.item()
+            test_loss1 += batch_loss.item()
 
         # Calculate accuracy
-        ps = torch.exp(logps)
-        top_p, top_class = ps.topk(1, dim=1)
-        equals = top_class == labels.view(*top_class.shape)
-        accuracy1 += torch.mean(equals.type(torch.FloatTensor)).item()
+            ps = torch.exp(logps)
+            top_p, top_class = ps.topk(1, dim=1)
+            equals = top_class == labels.view(*top_class.shape)
+            accuracy1 += torch.mean(equals.type(torch.FloatTensor)).item()
 
         #print(f"Test loss: {test_loss1/len(dataloaders['testing']):.3f}.. "
          #     f"Test accuracy: {accuracy1/len(dataloaders['testing']):.3f}")
 
-    print(f"Test accuracy: {accuracy1/len(dataloaders['testing']):.3f}")
+        print(f"Test accuracy: {accuracy1/len(dataloaders['testing']):.3f}")
 
 
 # Calling the function
@@ -440,8 +404,8 @@ chk_test_accuracy(dataloaders["testing"])
 model.class_to_idx = image_datasets['training'].class_to_idx
 model.cpu()
 torch.save({'epochs': arguments.epochs,
-            'classifier': model.classifier, 
-            'state_dict': model.state_dict(), 
+            'classifier': model.classifier,
+            'state_dict': model.state_dict(),
             'arch': arch,
             'class_to_idx': model.class_to_idx},
             'classifier.pth')
